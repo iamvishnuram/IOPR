@@ -25,7 +25,7 @@ def microsoft_login(request):
     # Get the login URL for the Microsoft account
     login_url = azure_adapter.get_authorization_url(
         request,
-        OAuth2Client.AUTHORIZATION_URL
+        OAuth2Client.AUTHORIZATION_URL # type: ignore
     )
 
     return render(request, 'login.html', {'microsoft': login_url})
@@ -220,7 +220,7 @@ def save_weekly_schedule(request):
             email_message = EmailMultiAlternatives(subject, to=['vishnu.m@kaseya.com'])
             email_message.attach_alternative(html_message, "text/html")
             
-            # email_message.send()
+            email_message.send()
             
 
             messages.success(request, 'Weekly Schedule saved successfully!')
@@ -233,7 +233,7 @@ def save_weekly_schedule(request):
 def save_regular_schedules(request):
     if request.method == 'POST':
         reporting_to = request.POST.get('manager')
-        # week = request.POST.get('week')
+        week = request.POST.get('week')
         employees = set(request.POST.getlist('employee[]'))
         print(employees)
         employee_ids = []
@@ -257,7 +257,7 @@ def save_regular_schedules(request):
                 'reporting_manager': reporting_to,
                 'employee': employee,
                 'employee_id': employee_id,
-                # 'week': week,
+                'week': week,
                 'day': ", ".join(checked_days)
             }
             data.append(entry)
@@ -270,7 +270,6 @@ def save_regular_schedules(request):
         else:
             Regular_Schedule.objects.filter(
                 reporting_to=reporting_to,
-                # week=week
             ).delete()
 
             for employee, employee_id in zip(employees, employee_ids):
@@ -282,19 +281,18 @@ def save_regular_schedules(request):
                     reporting_to=reporting_to,
                     employee=employee,
                     employeeID=employee_id,
-                    # week=week,
                     days=", ".join(checked_days)
                 )
                 regular.save()
                 
             #Compose email
-            # subject = f'Inoffice Roaster Submission - Notification - Calendar Week No.{week}'
-            # body = f'Hello, This is a notification for your Inoffice Presence Roaster submission for the mentioned calendar week. Please find the attached details.\n\nReporting Manager: {reporting_to}\n\nWeek No: {week}'
-            # # Create EmailMultiAlternatives object
-            # email_message = EmailMultiAlternatives(subject, body, to=['vishnu.m@kaseya.com'])
-            # email_message.attach_alternative(html_message, "text/html")
+            subject = f'Inoffice Roaster Submission - Notification - Calendar Week No.{week}'
+            body = f'Hello, This is a notification for your Inoffice Presence Roaster submission for the mentioned calendar week. Please find the attached details.\n\nReporting Manager: {reporting_to}\n\nWeek No: {week}'
+            # Create EmailMultiAlternatives object
+            email_message = EmailMultiAlternatives(subject, body, to=['vishnu.m@kaseya.com'])
+            email_message.attach_alternative(html_message, "text/html")
             
-            # email_message.send()
+            email_message.send()
             
 
             messages.success(request, 'Regular_Schedule saved successfully!')
@@ -303,22 +301,3 @@ def save_regular_schedules(request):
     else:
         return HttpResponseBadRequest('Invalid request method')
 
-
-            
-def save_weekly(request):
-    if request.method == 'POST':
-        reporting = request.POST.get['manager']
-        week = request.POST.get['week']
-        employees = set(request.POST.getlist['Employees[]'])
-        employee_id = []
-        
-        for employee in employees:
-            bamboo_employee = get_object_or_404(Bamboo, FirstNameLastName=employee)
-            employee_id.append(bamboo_employee.Employee)
-            
-        days = request.POST.get('day')
-        json.load(days)
-        
-        
-        
-    return JsonResponse()
