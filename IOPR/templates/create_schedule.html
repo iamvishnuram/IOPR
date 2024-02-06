@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Regular Schedule</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+</head>
+<body>
+    <h1>Create Regular Schedule</h1>
+    <form method="post" action="{% url 'create_schedule' %}" onsubmit="updateDaysFieldForSubmit()">
+        {% csrf_token %}
+        <label for="manager">Reporting To</label><br>
+        <select id="manager" class="form-control" onchange="getEmployees()">
+            <option value="">Choose a manager</option>
+            {% for manager in managers %}
+            <option value="{{ manager }}">{{ manager }}</option>
+            {% endfor %}
+        </select>
+
+        <br>
+
+        <label for="employee">Employees</label><br>
+        <div id="employee-container"></div>
+
+        <br>
+
+        <button type="submit">Create Schedule</button>
+    </form>
+    <br>
+    <script>
+        function getEmployees() {
+            var selectedManager = document.getElementById('manager').value;
+            $.ajax({
+                type: 'GET',
+                url: '{% url "get_employees_by_manager" %}',
+                data: {
+                    'manager': selectedManager
+                },
+                success: function (data) {
+                    var employeeContainer = document.getElementById('employee-container');
+                    employeeContainer.innerHTML = '';
+    
+                    for (var i = 0; i < data.length; i++) {
+                        var employeeDiv = document.createElement('div');
+    
+                        var checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.name = 'employee_checkbox';
+                        checkbox.value = data[i].id;
+    
+                        var label = document.createElement('label');
+                        label.appendChild(checkbox);
+                        label.appendChild(document.createTextNode(`${data[i].FirstNameLastName}`));
+    
+                        employeeDiv.appendChild(label);
+                        employeeContainer.appendChild(employeeDiv);
+                    }
+                }
+            });
+        }
+    </script>
+    
+    <script>
+        function updateDaysField(checkbox) {
+            var daysField = document.getElementById('id_days');
+            var dayName = checkbox.name;
+
+            if (checkbox.checked) {
+                // Append the day name to the daysField with a comma
+                daysField.value = daysField.value ? daysField.value + ',' + dayName : dayName;
+            } else {
+                // Remove the day name from the daysField
+                daysField.value = daysField.value.replace(new RegExp(dayName + ','), '').replace(new RegExp(dayName), '');
+            }
+        }
+
+        function updateDaysFieldForSubmit() {
+            // Ensure that the 'days' field is updated before form submission
+            updateDaysField(document.getElementById('id_sunday'));
+            updateDaysField(document.getElementById('id_monday'));
+            updateDaysField(document.getElementById('id_tuesday'));
+            updateDaysField(document.getElementById('id_wednesday'));
+            updateDaysField(document.getElementById('id_thursday'));
+            updateDaysField(document.getElementById('id_friday'));
+            updateDaysField(document.getElementById('id_saturday'));
+        }
+
+        function getEmployees() {
+            var selectedManager = document.getElementById('manager').value;
+            $.ajax({
+                type: 'GET',
+                url: '{% url "get_employees_by_manager" %}',
+                data: {
+                    'manager': selectedManager
+                },
+                success: function (data) {
+                    var employeeSelect = document.getElementById('employee');
+                    employeeSelect.innerHTML = '<option value="">Choose an employee</option>';
+
+                    for (var i = 0; i < data.length; i++) {
+                        var option = document.createElement('option');
+                        option.value = data[i].id;
+                        option.text = data[i].FullName;
+                        employeeSelect.add(option);
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

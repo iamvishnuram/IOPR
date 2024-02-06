@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Kaseya-IOPR {% endblock title %}
+{% block head %}
+<style>
+    input[type="checkbox"] {
+        margin: 0 auto;
+        display: block;
+    }
+
+    .button {
+        background-color: #37517e;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 5px 5px;
+    }
+
+    .button:hover {
+        background-color: #47b2e4;
+        transition: 0.2s;
+    }
+
+    .submit-btn {
+        background-color: #37517e;
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    .submit-btn:hover {
+        background-color: #47b2e4;
+        transition: 0.2s;
+    }
+</style>
+{% endblock head %}
+{% block body %}
+
+<section id="wfh" class="pricing">
+    <div class="container" data-aos="fade-up">
+        <div class="section-title">
+            <h2>In Office Presence Roster</h2>
+        </div>
+        <div class="row">
+            <div class="col-lg-12" data-aos="fade-up" data-aos-delay="200">
+                <div class="box featured">
+                    <div class="container">
+                        <button id="reset-button" class="button">Uncheck All</button>
+                        <form id="roster-form" method="POST" onsubmit="saveFormValues()">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col">
+                                    <label for="department">Department</label>
+                                    <select id="department" class="form-control">
+                                        <option value="">Choose a department</option>
+                                        {% for department in departments %}
+                                        <option value="{{ department }}">{{ department }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="col">
+                                    <label for="manager">Manager</label><br>
+                                    <select id="manager" class="form-control" disabled>
+                                        <option value="">Choose a department first</option>
+                                    </select>
+                                </div>
+
+                                <div class="col">
+                                    <label for="week">Week No</label>
+                                    {{ form.week }}
+                                </div>
+                            </div><br><br>
+                            <hr><br>
+                            <div class='row' id="employee-table-container" class="checkbox-label"></div>
+                            <br><br>
+                            <button id="save-roster-btn" type="button" class="submit-btn"
+                                style="display: block; margin: 0 auto;">Submit</button>
+                        </form>
+                        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+                        
+                        <script>
+                            $(document).ready(function () {
+                                $('#department').change(function () {
+                                    var selected_department = $(this).val();
+                                    if (selected_department) {
+                                        $('#manager').prop('disabled', false);
+                                        $('#manager').html('<option value="">Loading...</option>');
+                                        $.ajax({
+                                            url: '/load_managers/',
+                                            data: {
+                                                'department': selected_department
+                                            },
+                                            success: function (managers) {
+                                                $('#manager').html('<option value="">Choose a manager</option>');
+                                                managers.forEach(function (manager) {
+                                                    $('#manager').append(`<option value="${manager}">${manager}</option>`);
+                                                });
+                                            },
+                                            error: function (xhr, status, error) {
+                                                alert('An error occurred while loading the managers: ' + error);
+                                                $('#manager').html('<option value="">Choose a department first</option>');
+                                                $('#employee').html('');
+                                                $('#manager').prop('disabled', true);
+                                                $('#employee').prop('disabled', true);
+                                                $('#employeeID').prop('disabled', true); // Disable the employee ID field
+                                            }
+                                        });
+                                    } else {
+                                        $('#manager').html('<option value="">Choose a department first</option>');
+                                        $('#employee').html('');
+                                        $('#manager').prop('disabled', true);
+                                        $('#employee').prop('disabled', true);
+                                        $('#employeeID').prop('disabled', true); // Disable the employee ID field
+                                    }
+                                });
+                            
+                                $('#manager').change(function () {
+                                    var selectedManager = $(this).val();
+                                    var selectedWeek = $('#id_week').val();
+                                    if (selectedManager) {
+                                        loadEmployeeData(selectedManager, selectedWeek);
+                                    }
+                                });
+                            
+                                $('#id_week').change(function () {
+                                    var selectedWeek = $(this).val();
+                                    var selectedManager = $('#manager').val();
+                                    if (selectedManager) {
+                                        loadEmployeeData(selectedManager, selectedWeek);
+                                    }
+                                });
+                            
+                                function loadEmployeeData(selectedManager, selectedWeek) {
+                                    $('#employee-table-container').html('<table id="employee-table"><thead><tr><th>Name</th><th>Employee ID</th><th style="text-align: center;">Sunday</th><th style="text-align: center;">Monday</th><th style="text-align: center;">Tuesday</th><th style="text-align: center;">Wednesday</th><th style="text-align: center;">Thursday</th><th style="text-align: center;">Friday</th><th style="text-align: center;">Saturday</th></tr></thead><tbody></tbody></table><br>');
+                                
+                                    $.ajax({
+                                        url: '/load_employees/',
+                                        data: {
+                                            'manager': selectedManager,
+                                            'week': selectedWeek
+                                        },
+                                        success: function (data) {
+                                            $('#employee-table tbody').html('');
+                                            data.employees.forEach(function (employee, index) {
+                                                const employeeID = data.employeeID[index];
+                                                const selectedWeek = $('#id_week').val();
+                                                const url = `/week_dates?week=${selectedWeek}`;
+                                                fetch(url)
+                                                    .then(response => response.json())
+                                                    .then(weekData => {
+                                                        const checkboxes = weekData.week_dates.map((date, i) => {
+                                                            let checkedAttribute = '';
+                                                            if (Array.isArray(data.savedDates[index])) {
+                                                                // Check if the date is present in the array of saved dates
+                                                                if (data.savedDates[index].includes(date)) {
+                                                                    checkedAttribute = 'checked';
+                                                                }
+                                                            } else {
+                                                                // Check if the date is equal to the saved date
+                                                                if (date === data.savedDates[index]) {
+                                                                    checkedAttribute = 'checked';
+                                                                }
+                                                            }
+                                                            return `<td><input type="checkbox" class="checkbox" name="${date}" value="${date}" ${checkedAttribute}></td>`;
+                                                        }).join('');
+                                                        $('#employee-table tbody').append(`<tr><td>${employee}</td><td>${employeeID}</td>${checkboxes}</tr>`);
+                                                    });
+                                            });
+                                        },
+                                        error: function (xhr, status, error) {
+                                            alert('An error occurred while loading the employees: ' + error);
+                                        }
+                                    });
+                                }
+                                
+                                
+                                
+                            });
+                            </script>
+                            
+                        
+                        
+                        
+                        <script>
+                            // Update checkbox values according to selected week
+                            function updateCheckboxes() {
+                                // Get the selected week from the dropdown
+                                const weekDropdown = document.getElementById('id_week');
+                                const selectedWeek = weekDropdown.options[weekDropdown.selectedIndex].value;
+                              
+                                // Call the Django view to get the week dates
+                                const url = `/week_dates?week=${selectedWeek}`;
+                                fetch(url)
+                                  .then(response => response.json())
+                                  .then(data => {
+                                    // Update the checkbox values with the week dates
+                                    const checkboxes = document.querySelectorAll('.checkbox');
+                                    checkboxes.forEach(checkbox => {
+                                      // Get the parent row of the checkbox
+                                      const row = checkbox.closest('tr');
+                                      // Get the index of the checkbox in the row
+                                      const checkboxIndex = Array.from(row.querySelectorAll('.checkbox')).indexOf(checkbox);
+                                      // Update the checkbox value with the corresponding week date
+                                      checkbox.value = data.week_dates[checkboxIndex];
+                                    });
+                                  });
+                              }
+                              
+                              // Update the checkboxes when the page is loaded and when the week is changed
+                              document.addEventListener('DOMContentLoaded', updateCheckboxes);
+                              const weekDropdown = document.getElementById('id_week');
+                              weekDropdown.addEventListener('change', updateCheckboxes);
+                              
+                        </script>
+
+                        <script>
+                            // Add event listener for the reset button
+                            $('#reset-button').on('click', function () {
+                                $('.checkbox').prop('checked', false);
+                            });
+                        </script>
+                        <script>
+                            $('#save-roster-btn').click(function () {
+                                const department = $('#department').val();
+                                const manager = $('#manager').val();
+                                const week = $('#id_week').val();
+                                const employees = [];
+                                const employeeIDs = []; // Added employeeIDs array
+                                const days = {};
+                        
+                                $('.checkbox:checked').each(function () {
+                                    const employeeName = $(this).closest('tr').find('td:first-child').text();
+                                    const employeeID = $(this).closest('tr').find('td:nth-child(2)').text(); // Get the employeeID
+                                    const checkedDay = $(this).attr('name');
+                                    const checkedDate = $(this).val();
+                        
+                                    if (!(employeeName in days)) {
+                                        days[employeeName] = [];
+                                    }
+                        
+                                    days[employeeName].push(checkedDate);
+                                    employees.push(employeeName);
+                                    employeeIDs.push(employeeID); // Add employeeID to the employeeIDs array
+                                });
+                        
+                                $.ajax({
+                                    type: 'POST',
+                                    url: '/save_roster/',
+                                    data: {
+                                        'department': department,
+                                        'manager': manager,
+                                        'week': week,
+                                        'employee': employees,
+                                        'employeeID': employeeIDs, // Add the employeeID field
+                                        'days': JSON.stringify(days),
+                                        csrfmiddlewaretoken: $('input[name=csrfmiddlewaretoken]').val()
+                                    },
+                                    success: function (response) {
+                                        // handle success
+                                        window.location.href = '/';
+                                    },
+                                    error: function (xhr, status, error) {
+                                        // handle error
+                                        var errorMessage = [];
+                                        {% for message in messages %}
+                                            {% if message.tags == 'error' %}
+                                                errorMessage = "{{ message }}";
+                                            {% endif %}
+                                        {% endfor %}
+                                        if (errorMessage) {
+                                            alert(errorMessage);
+                                        }
+                                    }
+                                });
+                            });
+                        </script>
+                        
+                        {% if messages %}
+                            <script>
+                                window.onload = function () {
+                                    var successMessages = [];
+
+                                    {% for message in messages %}
+                                        {% if message.tags == 'success' %}
+                                            successMessages.push("{{ message }}");
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    if (successMessages.length > 0) {
+                                        alert(successMessages[0]);
+                                    }
+                                };
+                            </script>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock body %}

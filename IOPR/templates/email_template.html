@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regular Schedule Details</title>
+    <style>
+        table th {
+            font-size: 15px;
+            font-weight: bold;
+            color: #FCFDFE;
+            border-left: 2px solid #D0E4F5;
+            background-color: #2293EE;
+        }
+    
+        table th, td {
+            text-align: center;
+            padding: 8px;
+        }
+    
+        table tr {
+            background-color: #f2f2f2;
+        }
+    
+        .tick {
+            color: green;
+        }
+    
+        .cross {
+            color: red;
+        }
+    </style>
+    
+</head>
+<body>
+    <p>Hello, This is a notification for your Inoffice Presence Roaster submission for the mentioned calendar week. Please find the attached details.<br><br>
+        Reporting Manager: {{ data.0.reporting_manager }} <br><br>
+        Week No: {{ data.0.week }}</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Employee ID</th>
+                <th>Sunday</th>
+                <th>Monday</th>
+                <th>Tuesday</th>
+                <th>Wednesday</th>
+                <th>Thursday</th>
+                <th>Friday</th>
+                <th>Saturday</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in data %}
+                <tr>
+                    <td>{{ entry.employee }}</td>
+                    <td>{{ entry.employee_id }}</td>
+                    <td>{% if 'Sunday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Monday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Tuesday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Wednesday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Thursday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Friday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                    <td>{% if 'Saturday' in entry.day %} <span class="tick">✔</span> {% else %} <span class="cross">✘</span> {% endif %}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
