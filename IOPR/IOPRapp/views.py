@@ -25,7 +25,7 @@ def microsoft_login(request):
     # Get the login URL for the Microsoft account
     login_url = azure_adapter.get_authorization_url(
         request,
-        OAuth2Client.AUTHORIZATION_URL # type: ignore
+        OAuth2Client.AUTHORIZATION_URL 
     )
 
     return render(request, 'login.html', {'microsoft': login_url})
@@ -67,20 +67,23 @@ def logout_view(request):
 def index(request):
     today = datetime.now().date()
     weekday = today.weekday() 
+    current_week = int(today.strftime('%W')) + 1
     start_date = today - timedelta(days=weekday)
-    week = start_date.strftime('%W')  # Changed from %U to %W
+    week = int(start_date.strftime('%W')) + 1  # Changed from %U to %W
     week_dates = [(start_date + timedelta(days=i)).strftime('%A, %b %d') for i in range(7)]
 
     weeks = []
-    for i in range(-4, 1):
+    for i in range(-4, 2):
         week_start = (today + timedelta(days=7*i)) - timedelta(days=(today + timedelta(days=7*i)).weekday())
-        week_end = week_start + timedelta(days=6)
-        week_str = f"{week_start.strftime('%W')} ({week_start.strftime('%b %d')} - {week_end.strftime('%b %d')})"
+        week_end = week_start + timedelta(days=7)
+        week_start_mod = week_start - timedelta(days=1)
+        week_end_mod = week_end - timedelta(days=2)
+        week_str = f"{week_start.strftime('%W')} ({week_start_mod.strftime('%d/%m/%Y')} - {week_end_mod.strftime('%d/%m/%Y')})"
         weeks.append((week_start.strftime('%W'), week_str))
     
     form = WeekForm()
     form.fields['week'].choices = [('','Choose a week')] + weeks
-
+    print(weeks)
 
     # departments = Bamboo.objects.values_list('Department', flat=True).order_by('Department').distinct()
     managers = Bamboo.objects.values_list('ReportingTo', flat=True).order_by('ReportingTo').distinct()
@@ -114,7 +117,7 @@ def load_weekly_employees(request):
             saved_dates_list.extend(checked_days)
 
         data['savedDates'].append(saved_dates_list)
-        print(saved_dates_list)
+        # print(saved_dates_list)
 
     return JsonResponse(data, safe=False)
 
@@ -142,7 +145,7 @@ def load_regular_employees(request):
             saved_dates_list.extend(checked_days)
 
         data['savedDates'].append(saved_dates_list)
-        print(saved_dates_list)
+        # print(saved_dates_list)
 
     return JsonResponse(data, safe=False)
 
@@ -231,6 +234,10 @@ def save_weekly_schedule(request):
 
 
 def save_regular_schedules(request):
+    today = datetime.now()
+    weekday = today.weekday()
+    start_date = today - timedelta(days=weekday)
+    current_week = start_date.strftime('%W')
     if request.method == 'POST':
         reporting_to = request.POST.get('manager')
         week = request.POST.get('week')
@@ -268,28 +275,52 @@ def save_regular_schedules(request):
         if not employees:
             messages.error(request, 'Error: Required field not selected')
         else:
-            Regular_Schedule.objects.filter(
-                reporting_to=reporting_to,
+            for employee_id in employee_ids:
+                Weekly_Schedule.objects.filter(
+                employeeID=employee_id,
+                week=week
             ).delete()
+            
+            for employee_id in employee_ids:    
+                Regular_Schedule.objects.filter(
+                    employeeID=employee_id,
+                ).delete()
 
             for employee, employee_id in zip(employees, employee_ids):
                 # Create a list of days that are checked for the current employee
                 checked_days = [day for day in days[employee]]
 
                 # Create a single Regular_Schedule object for the current employee and save it
-                regular = Regular_Schedule(
-                    reporting_to=reporting_to,
-                    employee=employee,
-                    employeeID=employee_id,
-                    days=", ".join(checked_days)
-                )
-                regular.save()
-                
+                if week == current_week:
+                    regular = Regular_Schedule(
+                        reporting_to=reporting_to,
+                        employee=employee,
+                        employeeID=employee_id,
+                        days=", ".join(checked_days)
+                    )
+                    regular.save()
+                    
+                    weekly = Weekly_Schedule(
+                        reporting_to=reporting_to,
+                        week = week,
+                        employee=employee,
+                        employeeID=employee_id,
+                        days=", ".join(checked_days)
+                    )
+                    weekly.save()
+                else:
+                    regular = Regular_Schedule(
+                        reporting_to=reporting_to,
+                        employee=employee,
+                        employeeID=employee_id,
+                        days=", ".join(checked_days)
+                    )
+                    regular.save()
             #Compose email
             subject = f'Inoffice Roaster Submission - Notification - Calendar Week No.{week}'
             body = f'Hello, This is a notification for your Inoffice Presence Roaster submission for the mentioned calendar week. Please find the attached details.\n\nReporting Manager: {reporting_to}\n\nWeek No: {week}'
             # Create EmailMultiAlternatives object
-            email_message = EmailMultiAlternatives(subject, body, to=['vishnu.m@kaseya.com'])
+            email_message = EmailMultiAlternatives(subject, body, to=['vishnuram80@gmail.com'])
             email_message.attach_alternative(html_message, "text/html")
             
             email_message.send()
