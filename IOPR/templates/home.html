@@ -79,9 +79,9 @@
                 <div class="box featured">
                     <div class="container">
                         <label for="schedule-type"><b>Schedule Type</b> </label><br>
-                        <input type="radio" id="regular-schedule" name="schedule-type" value="regular">
-                        <label for="regular-schedule">Regular Schedule</label><br>
-                        <input type="radio" id="week-schedule" name="schedule-type" value="week" checked>
+                        <input type="radio" id="regular-schedule" name="schedule-type" value="regular" >
+                        <label for="regular-schedule">Default Schedule</label><br>
+                        <input type="radio" id="week-schedule" name="schedule-type" value="week" >
                         <label for="week-schedule">Only for a Week</label><br><br>
                         <button id="reset-button" class="button">Uncheck All</button>
                         <button id="select-all" class="button">Default</button>
@@ -92,7 +92,7 @@
                                 <div class="col">
                                     <label for="week">Week No</label>
                                     {% if schedule_type == 'regular' %}
-                                        <select id="id_week" class="form-control" disabled>
+                                        <select id="id_week" class="form-control" >
                                             {% for week_option in form.week %}
                                                 <option value="{{ week_option.value }}" {% if week_option.selected %}selected{% endif %}>{{ week_option.label }}</option>
                                             {% endfor %}
@@ -279,19 +279,37 @@
                         </script>
 
                         <script>
-                            // Update the week dropdown based on the selected schedule type
+                            // Initialize the weekDropdown to be disabled by default
+                            document.addEventListener('DOMContentLoaded', function() {
+                                const weekDropdown = document.getElementById('id_week');
+                                weekDropdown.disabled = true;
+                            });
+
                             function updateWeekDropdown() {
                                 const scheduleType = document.querySelector('input[name="schedule-type"]:checked').value;
                                 const weekDropdown = document.getElementById('id_week');
-                        
+
                                 if (scheduleType === 'regular') {
                                     // Set the current week as the default and disable the dropdown
-                                    weekDropdown.selectedIndex = 5;
+                                    weekDropdown.selectedIndex = 6;
                                     weekDropdown.disabled = true;
+
+                                    // Ensure all options are available
+                                    for (let i = 0; i < weekDropdown.options.length; i++) {
+                                        weekDropdown.options[i].style.display = 'block';
+                                    }
+
                                     updateCheckboxes(); // Update the checkboxes when regular schedule is selected
                                 } else {
                                     // Enable the dropdown
+                                    weekDropdown.selectedIndex = Math.min(weekDropdown.selectedIndex, 5);
                                     weekDropdown.disabled = false;
+
+                                    // Hide the sixth option
+                                    if (weekDropdown.options.length > 5) {
+                                        weekDropdown.options[6].style.display = 'none';
+                                    }
+
                                     updateCheckboxes(); // Update the checkboxes when the schedule type changes
                                 }
                             }
